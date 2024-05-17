@@ -15,6 +15,15 @@ pub struct ClientWithBucket {
     bucket: String,
 }
 
+impl Client {
+    pub fn with_bucket(self, bucket: String) -> ClientWithBucket {
+        ClientWithBucket {
+            client: self,
+            bucket,
+        }
+    }
+}
+
 impl ClientWithBucket {
     pub fn ls(&self, prefix: impl Into<String>) -> impl TryStream<Ok = ObjectInfo, Error = Error> {
         self.client.ls(self.bucket.clone(), prefix)

@@ -274,15 +274,6 @@ impl GetObject {
     }
 }
 
-struct KeyData(String);
-impl TryFrom<aws_sdk_s3::types::Object> for KeyData {
-    type Error = ();
-
-    fn try_from(value: aws_sdk_s3::types::Object) -> Result<Self, Self::Error> {
-        Ok(Self(value.key.ok_or(())?))
-    }
-}
-
 pub struct ObjectInfo {
     pub key: String,
     pub last_modified: Option<DateTime>,
