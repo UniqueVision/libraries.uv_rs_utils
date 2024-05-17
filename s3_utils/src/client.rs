@@ -2,7 +2,7 @@ use crate::{from_aws_sdk_s3_error, Error};
 use aws_sdk_s3::{
     operation::{
         delete_object::DeleteObjectOutput, delete_objects::DeleteObjectsOutput,
-        put_object::PutObjectOutput,
+        get_object::GetObjectOutput, put_object::PutObjectOutput,
     },
     presigning::PresigningConfig,
     primitives::{ByteStream, DateTime},
@@ -41,13 +41,12 @@ impl AsRef<aws_sdk_s3::Client> for Client {
 }
 
 impl Client {
-    #[doc(hidden)]
-    pub fn ls_inner<T>(
+    pub fn ls_inner<'a, T>(
         &self,
         bucket: impl Into<String>,
         prefix: impl Into<String>,
-        convert: impl FnMut(aws_sdk_s3::types::Object) -> Option<Result<T, Error>> + Copy + 'static,
-    ) -> impl TryStream<Ok = T, Error = Error> {
+        convert: impl FnMut(aws_sdk_s3::types::Object) -> Option<Result<T, Error>> + Clone + 'a,
+    ) -> impl TryStream<Ok = T, Error = Error> + 'a {
         self.as_ref()
             .list_objects_v2()
             .bucket(bucket)
@@ -61,7 +60,7 @@ impl Client {
                     s.contents
                         .unwrap_or_default()
                         .into_iter()
-                        .filter_map(convert),
+                        .filter_map(convert.clone()),
                 )
             })
             .try_flatten()
@@ -82,7 +81,7 @@ impl Client {
         })
     }
 
-    pub async fn list_file_name(
+    pub async fn list_path(
         &self,
         bucket: impl Into<String>,
         prefix: impl Into<String>,
@@ -92,26 +91,47 @@ impl Client {
             .await
     }
 
-    pub async fn get_object(
+    pub async fn list_file_name(
+        &self,
+        bucket: impl Into<String>,
+        prefix: impl Into<String>,
+    ) -> Result<Vec<String>, Error> {
+        let pre: String = prefix.into();
+        let pre2 = &*pre.clone();
+        self.ls_inner::<String>(bucket, pre, |obj| {
+            obj.key.and_then(|x| Some(Ok(x.strip_prefix(pre2)?.into())))
+        })
+        .try_collect()
+        .await
+    }
+
+    pub async fn get_object_inner(
         &self,
         bucket: impl Into<String>,
         key: impl Into<String>,
-    ) -> Result<GetObject, Error> {
-        let res = self
-            .as_ref()
+    ) -> Result<GetObjectOutput, Error> {
+        self.as_ref()
             .get_object()
             .set_bucket(Some(bucket.into()))
             .set_key(Some(key.into()))
             .send()
             .await
-            .map_err(from_aws_sdk_s3_error)?;
-        let content_type = res.content_type().unwrap_or("").to_owned();
+            .map_err(from_aws_sdk_s3_error)
+    }
+
+    pub async fn get_object(
+        &self,
+        bucket: impl Into<String>,
+        key: impl Into<String>,
+    ) -> Result<S3Object, Error> {
+        let res = self.get_object_inner(bucket, key).await?;
+        let content_type = res.content_type().unwrap_or_default().to_owned();
 
         let mut buf_reader = BufReader::new(res.body.into_async_read());
         let mut buf = vec![];
         buf_reader.read_to_end(&mut buf).await?;
 
-        Ok(GetObject { content_type, buf })
+        Ok(S3Object { content_type, buf })
     }
 
     pub async fn put_object(
@@ -242,12 +262,12 @@ fn merge<T>(mut first: &mut Option<Vec<T>>, mut second: &mut Option<Vec<T>>) {
 }
 
 #[derive(Debug)]
-pub struct GetObject {
+pub struct S3Object {
     content_type: String,
     buf: Vec<u8>,
 }
 
-impl GetObject {
+impl S3Object {
     pub fn content_type(&self) -> &str {
         &self.content_type
     }
@@ -267,9 +287,7 @@ impl GetObject {
         ))
     }
 
-    pub fn into_json_deserialize<T: DeserializeOwned>(
-        self,
-    ) -> Result<(String, T), serde_json::Error> {
+    pub fn deserialize_json<T: DeserializeOwned>(self) -> Result<(String, T), serde_json::Error> {
         Ok((self.content_type, serde_json::from_slice(&self.buf)?))
     }
 }

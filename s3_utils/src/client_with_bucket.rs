@@ -1,4 +1,4 @@
-use crate::{Client, Error, GetObject, ObjectInfo};
+use crate::{Client, Error, ObjectInfo, S3Object};
 use aws_sdk_s3::{
     operation::{
         delete_object::DeleteObjectOutput, delete_objects::DeleteObjectsOutput,
@@ -25,17 +25,23 @@ impl Client {
 }
 
 impl ClientWithBucket {
+    pub fn ls_inner<'a, T>(
+        &'a self,
+        prefix: impl Into<String>,
+        convert: impl FnMut(aws_sdk_s3::types::Object) -> Option<Result<T, Error>> + Clone + 'a,
+    ) -> impl TryStream<Ok = T, Error = Error> + 'a {
+        self.client.ls_inner(&self.bucket, prefix, convert)
+    }
+
     pub fn ls(&self, prefix: impl Into<String>) -> impl TryStream<Ok = ObjectInfo, Error = Error> {
         self.client.ls(self.bucket.clone(), prefix)
     }
 
-    pub async fn list_file_name(&self, prefix: impl Into<String>) -> Result<Vec<String>, Error> {
-        self.client
-            .list_file_name(self.bucket.clone(), prefix)
-            .await
+    pub async fn list_path(&self, prefix: impl Into<String>) -> Result<Vec<String>, Error> {
+        self.client.list_path(self.bucket.clone(), prefix).await
     }
 
-    pub async fn get_object(&self, key: impl Into<String>) -> Result<GetObject, Error> {
+    pub async fn get_object(&self, key: impl Into<String>) -> Result<S3Object, Error> {
         self.client.get_object(self.bucket.clone(), key).await
     }
 
