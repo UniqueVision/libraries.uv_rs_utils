@@ -4,7 +4,7 @@ use aws_sdk_s3::{
         delete_object::DeleteObjectOutput, delete_objects::DeleteObjectsOutput,
         get_object::GetObjectOutput, put_object::PutObjectOutput,
     },
-    presigning::PresigningConfig,
+    presigning::{PresignedRequest, PresigningConfig},
     primitives::{ByteStream, DateTime},
     types::{Delete, ObjectIdentifier},
 };
@@ -14,21 +14,26 @@ use serde::de::DeserializeOwned;
 use std::{mem::swap, time::Duration};
 use tokio::io::{AsyncReadExt, BufReader};
 
+/// awsのS3の高レベルなClient.
+/// 低レベルな操作は[`as_ref`](`AsRef::as_ref`)を使って取得したものを使ってください
 #[derive(Debug, Clone)]
 pub struct Client {
     s3: aws_sdk_s3::Client,
 }
 
 impl Client {
+    /// [`aws_sdk_s3::Client`]から[`Client`]を作ります
     pub fn from_s3_client(s3: aws_sdk_s3::Client) -> Self {
         Self { s3 }
     }
 
+    /// 環境変数から作ります
     pub async fn from_env() -> Self {
         let config = aws_config::from_env().load().await;
         Client::from_conf(&config)
     }
 
+    /// コンフィグから作ります
     pub fn from_conf<C: Into<aws_sdk_s3::Config>>(conf: C) -> Self {
         Self::from_s3_client(aws_sdk_s3::Client::from_conf(conf.into()))
     }
@@ -41,6 +46,10 @@ impl AsRef<aws_sdk_s3::Client> for Client {
 }
 
 impl Client {
+    /// s3のファイルの一覧を取得します。
+    ///
+    /// [`aws_sdk_s3::types::Object`]を使いたいとき以外は、[`ls`](`Self::ls`)を
+    /// 使うことをお勧めします。
     pub fn ls_inner<'a, T>(
         &self,
         bucket: impl Into<String>,
@@ -66,6 +75,10 @@ impl Client {
             .try_flatten()
     }
 
+    /// s3のファイルの一覧を[`TryStream`]で取得します。
+    ///
+    /// pathが欲しかったら[`list_path`](`Self::list_path`),
+    /// file名が欲しかったら[`list_file_name`](`Self::list_file_name`)を使ってください。
     pub fn ls(
         &self,
         bucket: impl Into<String>,
@@ -81,6 +94,7 @@ impl Client {
         })
     }
 
+    /// S3のファイルのパス一覧を取得します。
     pub async fn list_path(
         &self,
         bucket: impl Into<String>,
@@ -91,6 +105,9 @@ impl Client {
             .await
     }
 
+    /// S3のファイルのパス一覧を取得します。
+    ///
+    /// prefixの分は取り除かれています。
     pub async fn list_file_name(
         &self,
         bucket: impl Into<String>,
@@ -105,6 +122,11 @@ impl Client {
         .await
     }
 
+    /// S3からファイルを取得します。
+    ///
+    /// [`aws_sdk_s3::operation::get_object::GetObjectOutput`]が使いたいとき以外は、
+    /// [`get_object`](`Self::get_object`)を使うことをお勧めします。
+    /// このメソッドを使うと、Streamで値を取得できます。
     pub async fn get_object_inner(
         &self,
         bucket: impl Into<String>,
@@ -119,6 +141,7 @@ impl Client {
             .map_err(from_aws_sdk_s3_error)
     }
 
+    /// S3からファイルを取得します。
     pub async fn get_object(
         &self,
         bucket: impl Into<String>,
@@ -134,6 +157,9 @@ impl Client {
         Ok(S3Object { content_type, buf })
     }
 
+    /// S3へファイルを保存します
+    ///
+    /// `body`へは[`Vec<u8>`]など[`ByteStream`]に変換できるものを入れれます。
     pub async fn put_object(
         &self,
         bucket: impl Into<String>,
@@ -157,40 +183,75 @@ impl Client {
         Ok(res)
     }
 
+    /// S3のファイルへのGETのpresigend requestのURLなどを取得します.
+    ///
+    /// URLだけほしい場合は、[`Self::get_presigned_url`]をお勧めします。
     pub async fn get_presigned(
         &self,
         bucket: impl Into<String>,
         key: impl Into<String>,
         expire: Duration,
-    ) -> Result<String, Error> {
-        let presigned = self
-            .as_ref()
+    ) -> Result<PresignedRequest, Error> {
+        self.as_ref()
             .get_object()
             .bucket(bucket)
             .key(key)
             .presigned(PresigningConfig::builder().expires_in(expire).build()?)
             .await
-            .map_err(from_aws_sdk_s3_error)?;
-        Ok(presigned.uri().to_owned())
+            .map_err(from_aws_sdk_s3_error)
     }
 
-    pub async fn put_presigned(
+    /// S3のファイルへのGETのpresigend requestのURLを取得します.
+    ///
+    /// Headerなどがほしい場合は、[`Self::get_presigned`]をお勧めします。
+    pub async fn get_presigned_url(
         &self,
         bucket: impl Into<String>,
         key: impl Into<String>,
         expire: Duration,
     ) -> Result<String, Error> {
-        let presigned = self
-            .as_ref()
+        Ok(self
+            .get_presigned(bucket, key, expire)
+            .await?
+            .uri()
+            .to_owned())
+    }
+
+    /// S3のファイルへのPUTのpresigend requestのURLなどを取得します.
+    ///
+    /// URLだけほしい場合は、[`Self::put_presigned_url`]をお勧めします。
+    pub async fn put_presigned(
+        &self,
+        bucket: impl Into<String>,
+        key: impl Into<String>,
+        expire: Duration,
+    ) -> Result<PresignedRequest, Error> {
+        self.as_ref()
             .put_object()
             .bucket(bucket)
             .key(key)
             .presigned(PresigningConfig::builder().expires_in(expire).build()?)
             .await
-            .map_err(from_aws_sdk_s3_error)?;
-        Ok(presigned.uri().to_owned())
+            .map_err(from_aws_sdk_s3_error)
     }
 
+    /// S3のファイルへのPUTのpresigend requestのURLを取得します.
+    ///
+    ///  Headerなどがほしい場合は、[`Self::put_presigned`]をお勧めします。
+    pub async fn put_presigned_url(
+        &self,
+        bucket: impl Into<String>,
+        key: impl Into<String>,
+        expire: Duration,
+    ) -> Result<String, Error> {
+        Ok(self
+            .put_presigned(bucket, key, expire)
+            .await?
+            .uri()
+            .to_owned())
+    }
+
+    /// S3のファイルを削除します
     pub async fn delete(
         &self,
         bucket: impl Into<String>,
@@ -205,6 +266,7 @@ impl Client {
             .map_err(from_aws_sdk_s3_error)
     }
 
+    /// prefix以下の全てのファイルを削除します。
     pub async fn delete_by_prefix(
         &self,
         bucket: impl Into<String>,
