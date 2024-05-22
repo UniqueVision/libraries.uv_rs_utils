@@ -38,12 +38,12 @@ impl ClientWithBucket {
     ///
     /// [`aws_sdk_s3::types::Object`]を使いたいとき以外は、[`ls`](`Self::ls`)を
     /// 使うことをお勧めします。
-    pub fn ls_inner<'a, T>(
+    pub fn ls_raw<'a, T>(
         &'a self,
         prefix: impl Into<String>,
         convert: impl FnMut(aws_sdk_s3::types::Object) -> Option<Result<T, Error>> + Clone + 'a,
     ) -> impl TryStream<Ok = T, Error = Error> + 'a {
-        self.client.ls_inner(&self.bucket, prefix, convert)
+        self.client.ls_raw(&self.bucket, prefix, convert)
     }
 
     /// s3のファイルの一覧を[`TryStream`]で取得します。
@@ -59,13 +59,20 @@ impl ClientWithBucket {
         self.client.list_path(self.bucket.clone(), prefix).await
     }
 
+    /// S3のファイルのパス一覧を取得します。
+    ///
+    /// prefixの分は取り除かれます。
+    pub async fn list_file_name(&self, prefix: impl Into<String>) -> Result<Vec<String>, Error> {
+        self.client.list_file_name(&self.bucket, prefix).await
+    }
+
     /// S3からファイルを取得します。
     ///
     /// [`aws_sdk_s3::operation::get_object::GetObjectOutput`]が使いたいとき以外は、
     /// [`get_object`](`Self::get_object`)を使うことをお勧めします。
     /// このメソッドを使うと、Streamで値を取得できます。
     pub async fn get_object_inner(&self, key: impl Into<String>) -> Result<GetObjectOutput, Error> {
-        Ok(self.client.get_object_inner(&self.bucket, key).await?)
+        Ok(self.client.get_object_raw(&self.bucket, key).await?)
     }
 
     /// S3のファイルのパス一覧を取得します。

@@ -50,7 +50,7 @@ impl Client {
     ///
     /// [`aws_sdk_s3::types::Object`]を使いたいとき以外は、[`ls`](`Self::ls`)を
     /// 使うことをお勧めします。
-    pub fn ls_inner<'a, T>(
+    pub fn ls_raw<'a, T>(
         &self,
         bucket: impl Into<String>,
         prefix: impl Into<String>,
@@ -84,7 +84,7 @@ impl Client {
         bucket: impl Into<String>,
         prefix: impl Into<String>,
     ) -> impl TryStream<Ok = ObjectInfo, Error = Error> {
-        self.ls_inner::<ObjectInfo>(bucket, prefix, |obj| {
+        self.ls_raw::<ObjectInfo>(bucket, prefix, |obj| {
             Some(Ok(ObjectInfo {
                 key: obj.key?,
                 last_modified: obj.last_modified,
@@ -100,7 +100,7 @@ impl Client {
         bucket: impl Into<String>,
         prefix: impl Into<String>,
     ) -> Result<Vec<String>, Error> {
-        self.ls_inner::<String>(bucket, prefix, |obj| obj.key.map(|x| Ok(x)))
+        self.ls_raw::<String>(bucket, prefix, |obj| obj.key.map(|x| Ok(x)))
             .try_collect()
             .await
     }
@@ -115,7 +115,7 @@ impl Client {
     ) -> Result<Vec<String>, Error> {
         let pre: String = prefix.into();
         let pre2 = &*pre.clone();
-        self.ls_inner::<String>(bucket, pre, |obj| {
+        self.ls_raw::<String>(bucket, pre, |obj| {
             obj.key.and_then(|x| Some(Ok(x.strip_prefix(pre2)?.into())))
         })
         .try_collect()
@@ -127,7 +127,7 @@ impl Client {
     /// [`aws_sdk_s3::operation::get_object::GetObjectOutput`]が使いたいとき以外は、
     /// [`get_object`](`Self::get_object`)を使うことをお勧めします。
     /// このメソッドを使うと、Streamで値を取得できます。
-    pub async fn get_object_inner(
+    pub async fn get_object_raw(
         &self,
         bucket: impl Into<String>,
         key: impl Into<String>,
@@ -147,7 +147,7 @@ impl Client {
         bucket: impl Into<String>,
         key: impl Into<String>,
     ) -> Result<S3Object, Error> {
-        let res = self.get_object_inner(bucket, key).await?;
+        let res = self.get_object_raw(bucket, key).await?;
         let content_type = res.content_type().unwrap_or_default().to_owned();
 
         let mut buf_reader = BufReader::new(res.body.into_async_read());
