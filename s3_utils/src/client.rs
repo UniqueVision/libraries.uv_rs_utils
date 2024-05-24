@@ -360,3 +360,11 @@ pub struct ObjectInfo {
     pub e_tag: Option<String>,
     pub size: Option<i64>,
 }
+
+#[cfg(feature = "chrono")]
+impl ObjectInfo {
+    pub fn last_modified_chrono(&self) -> Option<chrono::DateTime<chrono::Utc>> {
+        use aws_smithy_types_convert::date_time::DateTimeExt;
+        self.last_modified.and_then(|lm| lm.to_chrono_utc().ok())
+    }
+}
