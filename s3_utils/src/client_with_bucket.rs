@@ -72,7 +72,7 @@ impl ClientWithBucket {
     /// [`get_object`](`Self::get_object`)を使うことをお勧めします。
     /// このメソッドを使うと、Streamで値を取得できます。
     pub async fn get_object_inner(&self, key: impl Into<String>) -> Result<GetObjectOutput, Error> {
-        Ok(self.client.get_object_raw(&self.bucket, key).await?)
+        self.client.get_object_raw(&self.bucket, key).await
     }
 
     /// S3のファイルのパス一覧を取得します。

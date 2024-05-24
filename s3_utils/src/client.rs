@@ -100,7 +100,7 @@ impl Client {
         bucket: impl Into<String>,
         prefix: impl Into<String>,
     ) -> Result<Vec<String>, Error> {
-        self.ls_raw::<String>(bucket, prefix, |obj| obj.key.map(|x| Ok(x)))
+        self.ls_raw::<String>(bucket, prefix, |obj| obj.key.map(Ok))
             .try_collect()
             .await
     }
