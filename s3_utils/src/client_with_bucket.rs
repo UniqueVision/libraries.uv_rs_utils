@@ -71,8 +71,8 @@ impl ClientWithBucket {
     /// [`aws_sdk_s3::operation::get_object::GetObjectOutput`]が使いたいとき以外は、
     /// [`get_object`](`Self::get_object`)を使うことをお勧めします。
     /// このメソッドを使うと、Streamで値を取得できます。
-    pub async fn get_object_inner(&self, key: impl Into<String>) -> Result<GetObjectOutput, Error> {
-        Ok(self.client.get_object_raw(&self.bucket, key).await?)
+    pub async fn get_object_raw(&self, key: impl Into<String>) -> Result<GetObjectOutput, Error> {
+        self.client.get_object_raw(&self.bucket, key).await
     }
 
     /// S3のファイルのパス一覧を取得します。

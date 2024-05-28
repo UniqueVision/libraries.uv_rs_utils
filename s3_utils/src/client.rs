@@ -100,7 +100,7 @@ impl Client {
         bucket: impl Into<String>,
         prefix: impl Into<String>,
     ) -> Result<Vec<String>, Error> {
-        self.ls_raw::<String>(bucket, prefix, |obj| obj.key.map(|x| Ok(x)))
+        self.ls_raw::<String>(bucket, prefix, |obj| obj.key.map(Ok))
             .try_collect()
             .await
     }
@@ -359,4 +359,12 @@ pub struct ObjectInfo {
     pub last_modified: Option<DateTime>,
     pub e_tag: Option<String>,
     pub size: Option<i64>,
+}
+
+#[cfg(feature = "chrono")]
+impl ObjectInfo {
+    pub fn last_modified_chrono(&self) -> Option<chrono::DateTime<chrono::Utc>> {
+        use aws_smithy_types_convert::date_time::DateTimeExt;
+        self.last_modified.and_then(|lm| lm.to_chrono_utc().ok())
+    }
 }
