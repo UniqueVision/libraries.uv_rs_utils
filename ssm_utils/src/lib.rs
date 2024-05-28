@@ -88,6 +88,12 @@ mod cache {
         pub fn reset_cahce(&self) {
             self.cache.clear()
         }
+
+        /// キャッシュの中に値を入れます
+        /// テストなどでssmから実際に取得する代わりに使えます。
+        pub fn insert_to_cache(&self, key: impl Into<String>, value: impl Into<String>) {
+            self.cache.insert(key.into(), value.into())
+        }
     }
 }
 
