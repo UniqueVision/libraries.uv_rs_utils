@@ -73,6 +73,21 @@ impl Client {
     ///
     /// [`aws_sdk_s3::types::Object`]を使いたいとき以外は、[`ls`](`Self::ls`)を
     /// 使うことをお勧めします。
+    ///
+    /// ```no_run
+    /// # use s3_utils::*;
+    /// # tokio_test::block_on(async {
+    /// use futures_util::TryStreamExt;
+    /// let client = s3_utils::Client::from_env().await;
+    /// client.ls_raw("sample_bucket", "folder1/", |obj| {Some(Ok(ObjectInfo {
+    ///     key: obj.key?,
+    ///     // 最終更新日が時刻以降のものを取得する
+    ///     last_modified: Some(obj.last_modified.filter(|last| last.secs() > 1716877593)?),
+    ///     e_tag: obj.e_tag,
+    ///     size: obj.size,
+    /// }))}).try_collect::<Vec<_>>().await;
+    /// # })
+    /// ```
     pub fn ls_raw<'a, T>(
         &self,
         bucket: impl Into<String>,
@@ -102,6 +117,15 @@ impl Client {
     ///
     /// pathが欲しかったら[`list_path`](`Self::list_path`),
     /// file名が欲しかったら[`list_file_name`](`Self::list_file_name`)を使ってください。
+    ///
+    /// ```no_run
+    /// # use s3_utils::*;
+    /// # tokio_test::block_on(async {
+    /// use futures_util::{StreamExt, TryStreamExt};
+    /// let client = s3_utils::Client::from_env().await;
+    /// client.ls("sample_bucket", "folder1/").count();
+    /// # })
+    /// ```
     pub fn ls(
         &self,
         bucket: impl Into<String>,
@@ -118,6 +142,14 @@ impl Client {
     }
 
     /// S3のファイルのパス一覧を取得します。
+    /// ```no_run
+    /// # use s3_utils::*;
+    /// # tokio_test::block_on(async {
+    /// use futures_util::{StreamExt, TryStreamExt};
+    /// let client = s3_utils::Client::from_env().await;
+    /// let list = client.list_path("sample_bucket", "folder1/");
+    /// # })
+    /// ```
     pub async fn list_path(
         &self,
         bucket: impl Into<String>,
@@ -131,6 +163,14 @@ impl Client {
     /// S3のファイルのパス一覧を取得します。
     ///
     /// prefixの分は取り除かれています。
+    /// ```no_run
+    /// # use s3_utils::*;
+    /// # tokio_test::block_on(async {
+    /// use futures_util::{StreamExt, TryStreamExt};
+    /// let client = s3_utils::Client::from_env().await;
+    /// let list = client.list_file_name("sample_bucket", "folder1/");
+    /// # })
+    /// ```
     pub async fn list_file_name(
         &self,
         bucket: impl Into<String>,
@@ -150,6 +190,15 @@ impl Client {
     /// [`aws_sdk_s3::operation::get_object::GetObjectOutput`]が使いたいとき以外は、
     /// [`get_object`](`Self::get_object`)を使うことをお勧めします。
     /// このメソッドを使うと、Streamで値を取得できます。
+    /// ```no_run
+    /// # use s3_utils::*;
+    /// # tokio_test::block_on(async {
+    /// use futures_util::{StreamExt, TryStreamExt};
+    /// let client = s3_utils::Client::from_env().await;
+    /// let obj = client.get_object_raw("sample_bucket", "folder1/aaa.png").await;
+    /// let disposition = obj.ok().and_then(|obj| obj.content_disposition);
+    /// # })
+    /// ```
     pub async fn get_object_raw(
         &self,
         bucket: impl Into<String>,
@@ -165,6 +214,14 @@ impl Client {
     }
 
     /// S3からファイルを取得します。
+    /// ```no_run
+    /// # use s3_utils::*;
+    /// # tokio_test::block_on(async {
+    /// use futures_util::{StreamExt, TryStreamExt};
+    /// let client = s3_utils::Client::from_env().await;
+    /// let obj = client.get_object("sample_bucket", "folder1/abc.json").await;
+    /// # })
+    /// ```
     pub async fn get_object(
         &self,
         bucket: impl Into<String>,
