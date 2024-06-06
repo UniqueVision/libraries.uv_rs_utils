@@ -144,3 +144,10 @@ impl Cache for ExpireCache {
         self.insert(key.into(), value.into())
     }
 }
+
+impl ExpireCachedClient {
+    /// キャッシュの全削除を行う
+    pub fn clear_cache(&self) {
+        self.cache.invalidate_all()
+    }
+}
