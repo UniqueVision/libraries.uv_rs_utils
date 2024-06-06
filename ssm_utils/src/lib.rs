@@ -11,16 +11,18 @@ pub mod sdk_config {
     pub use aws_config::*;
 }
 
-/// ssmのClient
+/// SSMのClient
+///
+/// キャッシュや、環境変数でMockさせることができます。
 #[derive(Debug, Clone)]
 pub struct Client<C = ()> {
-    ssm: Option<aws_sdk_ssm::Client>,
+    ssm: Option<sdk::Client>,
     cache: C,
 }
 
 impl Client {
-    /// [`aws_sdk_ssm::Client`]から[`Client`]を作ります
-    pub fn from_ssm_client(ssm: aws_sdk_ssm::Client) -> Self {
+    /// [`sdk::Client`]から[`Client`]を作ります
+    pub fn from_ssm_client(ssm: sdk::Client) -> Self {
         Self {
             ssm: Some(ssm),
             cache: (),
@@ -33,9 +35,10 @@ impl Client {
         Client::from_conf(&config)
     }
 
-    /// コンフィグから作ります
-    pub fn from_conf<C: Into<aws_sdk_ssm::Config>>(conf: C) -> Self {
-        Self::from_ssm_client(aws_sdk_ssm::Client::from_conf(conf.into()))
+    /// [`sdk::Config`]から作ります
+    /// [`sdk_config::SdkConfig`]なども受け入れられます。
+    pub fn from_conf<C: Into<sdk::Config>>(conf: C) -> Self {
+        Self::from_ssm_client(sdk::Client::from_conf(conf.into()))
     }
 
     /// SSMの値をキャッシュできるようにします
@@ -44,11 +47,12 @@ impl Client {
     ///
     /// let client = Client::from_env().await.with_cache();
     /// client.get("aaa").await;
+    /// client.get("aaa").await; // キャッシュされている
     /// ```
     pub fn with_cache(self) -> Client<RwCache> {
         Client {
             ssm: self.ssm,
-            cache: <RwCache as Cache>::new_cache(),
+            cache: RwCache::new_cache(),
         }
     }
 
@@ -73,7 +77,7 @@ impl Client {
 
 impl<C: Cache> Client<C> {
     /// `key`にあたる値をSSMから取得します。
-    /// キャッシュが有効ならキャッシュから取得します。
+    /// キャッシュが有効ならキャッシュを先に確認します。
     pub async fn get(&self, key: &str) -> Result<String, Error> {
         // キャッシュを見る
         if let Some(cached) = self.cache.get(key) {
@@ -112,9 +116,9 @@ impl<C: Cache> Client<C> {
         }
     }
 
-    /// [`aws_sdk_ssm::Client`]を取得します。
+    /// [`sdk::Client`]を取得します。
     /// mockだとpanicします。
-    pub fn raw_client(&self) -> &aws_sdk_ssm::Client {
+    pub fn raw_client(&self) -> &sdk::Client {
         self.ssm
             .as_ref()
             .expect("raw_client not supported in mock mode.")
@@ -126,6 +130,7 @@ impl<C: Cache> Client<C> {
     }
 }
 
+/// キャッシュを規定する
 pub trait Cache: Clone {
     fn new_cache() -> Self
     where
@@ -139,21 +144,26 @@ impl Cache for () {
     fn new_cache() -> Self {
         ()
     }
+    /// 必ずNone
     #[inline]
     fn get(&self, _key: &str) -> Option<String> {
         None
     }
+    /// noop
     #[inline]
     fn set(&self, _key: &str, _value: &str) {}
 }
 
 pub type RwCache = Arc<RwLock<HashMap<String, String>>>;
+/// キャッシュ付きssm Client
 pub type CachedClient = Client<RwCache>;
 
 impl Cache for RwCache {
     fn new_cache() -> Self {
         Arc::new(RwLock::new(HashMap::new()))
     }
+    /// キャッシュから取得
+    /// Readのロックがかかるので、ほかにwriteのロックを書けてると待機します。
     fn get(&self, key: &str) -> Option<String> {
         self.as_ref()
             .read()
@@ -172,6 +182,7 @@ impl Cache for RwCache {
 
 impl CachedClient {
     /// キャッシュを取得する
+    /// これがdropされないと[`Client::get`]が待機します。
     pub fn get_mut_cache(&self) -> Option<RwLockWriteGuard<HashMap<String, String>>> {
         self.cache.write().ok()
     }
@@ -187,5 +198,5 @@ pub enum Error {
     #[error("Key not found")]
     NotFound,
     #[error(transparent)]
-    Ssm(aws_sdk_ssm::Error),
+    Ssm(sdk::Error),
 }
