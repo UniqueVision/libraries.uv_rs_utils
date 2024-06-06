@@ -141,9 +141,7 @@ pub trait Cache: Clone {
 
 /// キャッシュしない
 impl Cache for () {
-    fn new_cache() -> Self {
-        ()
-    }
+    fn new_cache() -> Self {}
     /// 必ずNone
     #[inline]
     fn get(&self, _key: &str) -> Option<String> {
@@ -171,11 +169,8 @@ impl Cache for RwCache {
             .and_then(|rg| rg.get(key).cloned())
     }
     fn set(&self, key: &str, value: &str) {
-        match self.write() {
-            Ok(mut map) => {
-                map.insert(key.to_owned(), value.to_owned());
-            }
-            Err(_) => {}
+        if let Ok(mut map) = self.write() {
+            map.insert(key.to_owned(), value.to_owned());
         }
     }
 }
