@@ -12,7 +12,7 @@ use aws_sdk_dynamodb::{
 use crate::{into_values::Number, IntoValue};
 
 /// awsのS3の高レベルなClient.
-/// 低レベルな操作は[`as_ref`](`AsRef::as_ref`)を使って取得したものを使ってください
+/// 低レベルな操作は[`Client::get_raw_client`]を使って取得したものを使ってください
 #[derive(Debug, Clone)]
 pub struct Client<A = ()> {
     dynamodb: aws_sdk_dynamodb::Client,
@@ -42,6 +42,11 @@ impl Client {
 }
 
 impl<A> Client<A> {
+    /// 内側のclientを取得する
+    pub fn get_raw_client(&self) -> &aws_sdk_dynamodb::Client {
+        &self.dynamodb
+    }
+
     /// itemを取得します
     ///
     /// 生の値を取得します
