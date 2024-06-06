@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 aws-config = { version = "1.1.7", features = ["behavior-version-latest"] }
-aws-sdk-dynamodb = {version = "1.27.0"}
+aws-sdk-dynamodb = {version = "1.32.0"}
 thiserror = { version = "1" }
 serde = { version = "1" }
 serde_json = { version = "1" }

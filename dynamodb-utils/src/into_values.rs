@@ -1,5 +1,3 @@
-use std::fmt::Display;
-
 use aws_sdk_dynamodb::{primitives::Blob, types::AttributeValue};
 
 pub trait IntoValue {

@@ -16,6 +16,7 @@ use crate::{into_values::Number, IntoValue};
 #[derive(Debug, Clone)]
 pub struct Client<A = ()> {
     dynamodb: aws_sdk_dynamodb::Client,
+    #[allow(dead_code)] // Todo: 後でautoscale対応を足す
     autoscale: A,
 }
 
