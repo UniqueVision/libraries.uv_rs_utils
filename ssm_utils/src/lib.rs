@@ -3,6 +3,14 @@ use std::{
     sync::{Arc, RwLock, RwLockWriteGuard},
 };
 
+pub mod sdk {
+    pub use aws_sdk_ssm::*;
+}
+
+pub mod sdk_config {
+    pub use aws_config::*;
+}
+
 /// ssmのClient
 #[derive(Debug, Clone)]
 pub struct Client<C = ()> {
@@ -31,6 +39,12 @@ impl Client {
     }
 
     /// SSMの値をキャッシュできるようにします
+    /// ```no_run
+    /// # use ssm_utils::*;
+    ///
+    /// let client = Client::from_env().await.with_cache();
+    /// client.get("aaa").await;
+    /// ```
     pub fn with_cache(self) -> Client<RwCache> {
         Client {
             ssm: self.ssm,
@@ -38,7 +52,7 @@ impl Client {
         }
     }
 
-    /// Mock用のモードで起動します
+    /// Mock用のClientを作ります。
     /// このモードでは、環境変数の値から確認するようになります。
     pub fn mock() -> Client {
         Client {
@@ -47,7 +61,7 @@ impl Client {
         }
     }
 
-    /// Mock用のモードで起動します
+    /// Mock用のClientを作ります。
     /// このモードでは、mapの中身を確認し、その後環境変数を確認します。
     pub fn mock_from_map(map: HashMap<String, String>) -> CachedClient {
         Client {
@@ -100,10 +114,10 @@ impl<C: Cache> Client<C> {
 
     /// [`aws_sdk_ssm::Client`]を取得します。
     /// mockだとpanicします。
-    pub fn get_inner(&self) -> &aws_sdk_ssm::Client {
+    pub fn raw_client(&self) -> &aws_sdk_ssm::Client {
         self.ssm
             .as_ref()
-            .expect("get_inner not supported in mock mode.")
+            .expect("raw_client not supported in mock mode.")
     }
 
     /// mockかどうか。
