@@ -42,6 +42,9 @@ impl Client {
 }
 
 impl<A> Client<A> {
+    /// itemを取得します
+    ///
+    /// 生の値を取得します
     pub async fn get_item_raw(
         &self,
         table_name: impl Into<String>,
@@ -57,6 +60,7 @@ impl<A> Client<A> {
             .map_err(from_aws_sdk_dynamodb_error)
     }
 
+    /// itemを取得して、デシリアライズされた形にします
     pub async fn get_item<T>(
         &self,
         table_name: impl Into<String>,
@@ -74,6 +78,8 @@ impl<A> Client<A> {
             })
     }
 
+    /// itemを登録します
+    /// 生のitemを登録します。
     pub async fn put_item_raw(
         &self,
         table_name: impl Into<String>,
@@ -88,6 +94,8 @@ impl<A> Client<A> {
             .map_err(from_aws_sdk_dynamodb_error)
     }
 
+    /// itemを登録します
+    /// シリアライズされます。
     pub async fn put_item<T: Serialize>(
         &self,
         table_name: impl Into<String>,
@@ -97,6 +105,7 @@ impl<A> Client<A> {
             .await
     }
 
+    /// itemを削除します。
     pub async fn delete_item(
         &self,
         table_name: impl Into<String>,
@@ -112,6 +121,12 @@ impl<A> Client<A> {
             .map_err(from_aws_sdk_dynamodb_error)
     }
 
+    /// 特定のアイテムの特定の項目の値を登録、更新します
+    ///
+    /// - `key_name` 更新対象のitemの、keyの項目名
+    /// - `key_value` 更新対象のitemの、keyの値
+    /// - `update_target` 更新対象の値の項目名
+    /// - `value` 更新対象の値
     pub async fn set_value(
         &self,
         table_name: impl Into<String>,
@@ -131,6 +146,13 @@ impl<A> Client<A> {
             .map_err(from_aws_sdk_dynamodb_error)
     }
 
+    /// 特定のアイテムの特定の項目の数値を加算します。
+    /// この操作はatomicであることが保証されています。
+    ///
+    /// - `key_name` 更新対象のitemの、keyの項目名
+    /// - `key_value` 更新対象のitemの、keyの値
+    /// - `update_target` 更新対象の値の項目名
+    /// - `value` 更新対象の加算値
     pub async fn add_value(
         &self,
         table_name: impl Into<String>,
@@ -150,6 +172,7 @@ impl<A> Client<A> {
             .map_err(from_aws_sdk_dynamodb_error)
     }
 
+    /// テーブルのスループット値を更新します
     pub async fn update_provisioned_throughput(
         &self,
         table_name: impl Into<String>,
