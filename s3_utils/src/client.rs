@@ -15,7 +15,7 @@ use std::{mem::swap, time::Duration};
 use tokio::io::{AsyncReadExt, BufReader};
 
 /// awsのS3の高レベルなClient.
-/// 低レベルな操作は[`as_ref`](`AsRef::as_ref`)を使って取得したものを使ってください
+/// 低レベルな操作は[`raw_client`](`Client::raw_client`)を使って取得したものを使ってください
 #[derive(Debug, Clone)]
 pub struct Client {
     s3: aws_sdk_s3::Client,
@@ -46,6 +46,11 @@ impl AsRef<aws_sdk_s3::Client> for Client {
 }
 
 impl Client {
+    /// 内側のclientを取得する
+    pub fn raw_client(&self) -> &aws_sdk_s3::Client {
+        &self.s3
+    }
+
     /// s3のファイルの一覧を取得します。
     ///
     /// [`aws_sdk_s3::types::Object`]を使いたいとき以外は、[`ls`](`Self::ls`)を
