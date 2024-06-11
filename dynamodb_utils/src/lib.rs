@@ -3,6 +3,7 @@ pub use into_values::IntoValue;
 
 mod client;
 mod into_values;
+pub mod utils;
 
 pub mod sdk {
     pub use aws_sdk_dynamodb::*;
