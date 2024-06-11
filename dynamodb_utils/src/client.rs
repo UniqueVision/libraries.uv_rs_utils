@@ -1,15 +1,18 @@
+use crate::{
+    into_values::Number,
+    sdk::{
+        operation::{
+            delete_item::DeleteItemOutput, get_item::GetItemOutput, put_item::PutItemOutput,
+            update_item::UpdateItemOutput, update_table::UpdateTableOutput,
+        },
+        types::{AttributeValue, ProvisionedThroughput},
+        PaginationStreamExt,
+    },
+    IntoValue,
+};
+use futures_util::{TryStream, TryStreamExt};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt::Display};
-
-use aws_sdk_dynamodb::{
-    operation::{
-        delete_item::DeleteItemOutput, get_item::GetItemOutput, put_item::PutItemOutput,
-        update_item::UpdateItemOutput, update_table::UpdateTableOutput,
-    },
-    types::{AttributeValue, ProvisionedThroughput},
-};
-
-use crate::{into_values::Number, IntoValue};
 
 /// awsのS3の高レベルなClient.
 /// 低レベルな操作は[`raw_client`](`Client::raw_client`)を使って取得したものを使ってください
@@ -78,8 +81,10 @@ impl<A> Client<A> {
         self.get_item_raw(table_name, key_name, key_value)
             .await
             .and_then(|value| {
-                serde_dynamo::aws_sdk_dynamodb_1::from_item(value.item.ok_or(Error::NotFound)?)
-                    .map_err(Into::into)
+                crate::serde_dynamo::aws_sdk_dynamodb_1::from_item(
+                    value.item.ok_or(Error::NotFound)?,
+                )
+                .map_err(Into::into)
             })
     }
 
@@ -106,8 +111,11 @@ impl<A> Client<A> {
         table_name: impl Into<String>,
         data: T,
     ) -> Result<PutItemOutput, Error> {
-        self.put_item_raw(table_name, serde_dynamo::aws_sdk_dynamodb_1::to_item(data)?)
-            .await
+        self.put_item_raw(
+            table_name,
+            crate::serde_dynamo::aws_sdk_dynamodb_1::to_item(data)?,
+        )
+        .await
     }
 
     /// itemを削除します。
@@ -205,7 +213,7 @@ pub enum Error {
     #[error(transparent)]
     DynamoDb(#[from] aws_sdk_dynamodb::Error),
     #[error(transparent)]
-    Serde(#[from] serde_dynamo::Error),
+    Serde(#[from] crate::serde_dynamo::Error),
     #[error("No Item")]
     NotFound,
 }

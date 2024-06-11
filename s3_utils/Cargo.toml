@@ -10,9 +10,9 @@ rust-version = "1.75.0"
 [dependencies]
 aws-config.workspace = true
 thiserror.workspace = true
+aws-smithy-types-convert.workspace = true
+futures-util.workspace = true
 aws-sdk-s3 = { version = "1.31.0" }
-aws-smithy-types-convert = { version = "0.60.8", features = ["convert-streams"] }
-futures-util = "0.3.30"
 tokio = { version = "1", default-features = false, features = ["io-util"] }
 base64 = { version = "0.21" }
 serde.workspace = true
