@@ -750,6 +750,8 @@ version = "0.1.0"
 dependencies = [
  "aws-config",
  "aws-sdk-dynamodb",
+ "aws-smithy-types-convert",
+ "futures-util",
  "serde",
  "serde_dynamo",
  "serde_json",
