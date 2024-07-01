@@ -41,6 +41,9 @@ impl Client {
     }
 
     /// ローカルでminioにアクセス
+    /// user : minio
+    /// pass : pass
+    /// url : http://minio:9000
     pub fn minio(user: &str, pass: &str, url: &str) -> Self {
         let credentials_provider = Credentials::new(user, pass, None, None, "example");
         let config = aws_sdk_s3::Config::builder()
