@@ -1,5 +1,7 @@
 use crate::{from_aws_sdk_s3_error, Error};
+use aws_config::Region;
 use aws_sdk_s3::{
+    config::Credentials,
     operation::{
         delete_object::DeleteObjectOutput, delete_objects::DeleteObjectsOutput,
         get_object::GetObjectOutput, put_object::PutObjectOutput,
@@ -36,6 +38,19 @@ impl Client {
     /// コンフィグから作ります
     pub fn from_conf<C: Into<aws_sdk_s3::Config>>(conf: C) -> Self {
         Self::from_s3_client(aws_sdk_s3::Client::from_conf(conf.into()))
+    }
+
+    /// ローカルでminioにアクセス
+    pub fn minio(user: &str, pass: &str, url: &str) -> Self {
+        let credentials_provider = Credentials::new(user, pass, None, None, "example");
+        let config = aws_sdk_s3::Config::builder()
+            .behavior_version_latest()
+            .credentials_provider(credentials_provider)
+            .region(Region::new("ap-northeast-1"))
+            .force_path_style(true)
+            .endpoint_url(url)
+            .build();
+        Self::from_conf(config)
     }
 }
 
