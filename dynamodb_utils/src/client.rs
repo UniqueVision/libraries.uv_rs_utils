@@ -8,6 +8,7 @@ use crate::{
         types::{AttributeValue, ProvisionedThroughput},
         PaginationStreamExt,
     },
+    utils::deserialize_stream,
     IntoValue,
 };
 use futures_util::{TryStream, TryStreamExt};
@@ -183,6 +184,33 @@ impl<A> Client<A> {
             .send()
             .await
             .map_err(from_aws_sdk_dynamodb_error)
+    }
+
+    /// scanを掛けます
+    /// 具体的な型で受けたいなら[`scan_item`](`Self::scan_item`)があります。
+    pub fn scan_item_raw(
+        &self,
+        table_name: impl Into<String>,
+    ) -> impl TryStream<Ok = HashMap<String, AttributeValue>, Error = Error> {
+        self.dynamodb
+            .scan()
+            .table_name(table_name)
+            .into_paginator()
+            .items()
+            .send()
+            .into_stream_03x()
+            .map_err(from_aws_sdk_dynamodb_error)
+    }
+
+    /// scanを掛けます
+    pub fn scan_item<T>(
+        &self,
+        table_name: impl Into<String>,
+    ) -> impl TryStream<Ok = T, Error = Error>
+    where
+        for<'de> T: Deserialize<'de>,
+    {
+        deserialize_stream(self.scan_item_raw(table_name))
     }
 
     /// テーブルのスループット値を更新します
