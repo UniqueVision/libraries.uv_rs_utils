@@ -236,6 +236,7 @@ impl<A> Client<A> {
             .map_err(from_aws_sdk_dynamodb_error)
     }
 
+    // テーブルを削除します
     pub async fn delete_table(
         &self,
         table_name: impl Into<String>,
