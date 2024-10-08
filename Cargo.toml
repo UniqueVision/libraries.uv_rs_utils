@@ -9,6 +9,6 @@ version = "0.3.0"
 aws-config = { version = "1.5.8", features = ["behavior-version-latest"] }
 aws-smithy-types-convert = { version = "0.60.8", features = ["convert-streams"] }
 futures-util = "0.3.31"
-thiserror = { version = "1" }
-serde = { version = "1" }
+thiserror = { version = "1.0.64" }
+serde = { version = "1.0.210" }
 serde_json = { version = "1.0.128" }
