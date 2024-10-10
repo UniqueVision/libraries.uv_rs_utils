@@ -53,6 +53,11 @@ impl Client {
 impl<C: Cache> Client<C> {
     /// `key`にあたる値をSSMから取得します。
     /// キャッシュが有効ならキャッシュを先に確認します。
+    ///
+    /// ### mockのとき
+    /// キャッシュが有効ならキャッシュから確認し、
+    /// そうでないなら環境変数から取得します。
+    /// 環境変数は大文字化と`/`を`_`に変換したものも見るようにします。
     pub async fn get(&self, key: &str) -> Result<String, Error> {
         // キャッシュを見る
         if let Some(cached) = self.cache.get(key) {
