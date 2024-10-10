@@ -10,6 +10,6 @@ where
     for<'de> T: Deserialize<'de>,
 {
     raw_stream.and_then(|item| {
-        ready(crate::serde_dynamo::aws_sdk_dynamodb_1::from_item(item).map_err(|e| Error::Serde(e)))
+        ready(crate::serde_dynamo::aws_sdk_dynamodb_1::from_item(item).map_err(Error::Serde))
     })
 }

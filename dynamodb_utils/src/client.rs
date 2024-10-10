@@ -2,8 +2,9 @@ use crate::{
     into_values::Number,
     sdk::{
         operation::{
-            delete_item::DeleteItemOutput, get_item::GetItemOutput, put_item::PutItemOutput,
-            update_item::UpdateItemOutput, update_table::UpdateTableOutput,
+            delete_item::DeleteItemOutput, delete_table::DeleteTableOutput,
+            get_item::GetItemOutput, put_item::PutItemOutput, update_item::UpdateItemOutput,
+            update_table::UpdateTableOutput,
         },
         types::{AttributeValue, ProvisionedThroughput},
         PaginationStreamExt,
@@ -15,7 +16,7 @@ use futures_util::{TryStream, TryStreamExt};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt::Display};
 
-/// awsのS3の高レベルなClient.
+/// awsのDynamoDbの高レベルなClient.
 /// 低レベルな操作は[`raw_client`](`Client::raw_client`)を使って取得したものを使ってください
 #[derive(Debug, Clone)]
 pub struct Client<A = ()> {
@@ -25,8 +26,8 @@ pub struct Client<A = ()> {
 }
 
 impl Client {
-    /// [`aws_sdk_s3::Client`]から[`Client`]を作ります
-    pub fn from_s3_client(dynamo: aws_sdk_dynamodb::Client) -> Self {
+    /// [`aws_sdk_dynamodb::Client`]から[`Client`]を作ります
+    pub fn from_dynamodb_client(dynamo: aws_sdk_dynamodb::Client) -> Self {
         Self {
             dynamodb: dynamo,
             autoscale: (),
@@ -41,7 +42,7 @@ impl Client {
 
     /// コンフィグから作ります
     pub fn from_conf<C: Into<aws_sdk_dynamodb::Config>>(conf: C) -> Self {
-        Self::from_s3_client(aws_sdk_dynamodb::Client::from_conf(conf.into()))
+        Self::from_dynamodb_client(aws_sdk_dynamodb::Client::from_conf(conf.into()))
     }
 }
 
@@ -231,6 +232,19 @@ impl<A> Client<A> {
                     .build()
                     .map_err(from_aws_sdk_dynamodb_error)?,
             )
+            .send()
+            .await
+            .map_err(from_aws_sdk_dynamodb_error)
+    }
+
+    // テーブルを削除します
+    pub async fn delete_table(
+        &self,
+        table_name: impl Into<String>,
+    ) -> Result<DeleteTableOutput, Error> {
+        self.dynamodb
+            .delete_table()
+            .table_name(table_name)
             .send()
             .await
             .map_err(from_aws_sdk_dynamodb_error)
