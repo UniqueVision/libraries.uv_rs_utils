@@ -145,6 +145,7 @@ impl Cache for ExpireCache {
     }
 }
 
+#[cfg(feature = "expire")]
 impl ExpireCachedClient {
     /// キャッシュの全削除を行う
     pub fn clear_cache(&self) {
