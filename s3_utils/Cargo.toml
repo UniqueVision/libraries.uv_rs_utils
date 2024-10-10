@@ -19,6 +19,9 @@ serde.workspace = true
 serde_json.workspace = true
 chrono = { version = "0.4.38", default-features = false, optional = true }
 
+[dev-dependencies]
+tokio-test = "0.4.4"
+
 [features]
 default = ["chrono"]
 chrono = ["dep:chrono", "aws-smithy-types-convert/convert-chrono"]

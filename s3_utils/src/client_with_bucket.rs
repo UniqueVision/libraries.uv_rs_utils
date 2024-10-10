@@ -18,13 +18,14 @@ pub struct ClientWithBucket {
 }
 
 impl ClientWithBucket {
+    /// bucket無しのclientを取得します
     pub fn no_bucket_client(&self) -> &Client {
         &self.client
     }
 }
 
 impl Client {
-    /// bucketを指定します。APIのbucket名を固定して運尿できます。
+    /// bucketを指定します。APIのbucket名を固定して運用できます。
     pub fn with_bucket(self, bucket: String) -> ClientWithBucket {
         ClientWithBucket {
             client: self,
