@@ -53,6 +53,11 @@ impl Client {
 impl<C: Cache> Client<C> {
     /// `key`にあたる値をSSMから取得します。
     /// キャッシュが有効ならキャッシュを先に確認します。
+    ///
+    /// ### mockのとき
+    /// キャッシュが有効ならキャッシュから確認し、
+    /// そうでないなら環境変数から取得します。
+    /// 環境変数は大文字化と`/`を`_`に変換したものも見るようにします。
     pub async fn get(&self, key: &str) -> Result<String, Error> {
         // キャッシュを見る
         if let Some(cached) = self.cache.get(key) {
@@ -61,7 +66,9 @@ impl<C: Cache> Client<C> {
         // mockか確認
         let Some(ssm_client) = &self.ssm else {
             // mockならenvの値も確認する
-            return std::env::var(key).map_err(|_| Error::NotFound);
+            return std::env::var(key)
+                .or_else(|_| std::env::var(key.replace("/", "_").to_uppercase()))
+                .map_err(|_| Error::NotFound);
         };
         // ssmに問い合わせる
         let resp = ssm_client
