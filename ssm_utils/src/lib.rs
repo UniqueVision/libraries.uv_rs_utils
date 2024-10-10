@@ -61,7 +61,9 @@ impl<C: Cache> Client<C> {
         // mockか確認
         let Some(ssm_client) = &self.ssm else {
             // mockならenvの値も確認する
-            return std::env::var(key).map_err(|_| Error::NotFound);
+            return std::env::var(key)
+                .or_else(|_| std::env::var(key.replace("/", "_").to_uppercase()))
+                .map_err(|_| Error::NotFound);
         };
         // ssmに問い合わせる
         let resp = ssm_client
