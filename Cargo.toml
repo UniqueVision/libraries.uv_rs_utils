@@ -6,9 +6,9 @@ resolver = "2"
 version = "0.4.0"
 
 [workspace.dependencies]
-aws-config = { version = "1.5.8", features = ["behavior-version-latest"] }
+aws-config = { version = "1.5.10", features = ["behavior-version-latest"] }
 aws-smithy-types-convert = { version = "0.60.8", features = ["convert-streams"] }
 futures-util = "0.3.31"
-thiserror = { version = "1.0.64" }
+thiserror = { version = "2.0.0" }
 serde = { version = "1.0.210" }
 serde_json = { version = "1.0.128" }
