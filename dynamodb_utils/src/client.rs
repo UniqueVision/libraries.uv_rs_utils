@@ -254,13 +254,25 @@ impl<A> Client<A> {
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error(transparent)]
-    DynamoDb(#[from] aws_sdk_dynamodb::Error),
+    DynamoDb(Box<aws_sdk_dynamodb::Error>),
     #[error(transparent)]
-    Serde(#[from] crate::serde_dynamo::Error),
+    Serde(Box<crate::serde_dynamo::Error>),
     #[error("No Item")]
     NotFound,
 }
 
 pub(crate) fn from_aws_sdk_dynamodb_error(e: impl Into<aws_sdk_dynamodb::Error>) -> Error {
-    Error::DynamoDb(e.into())
+    Error::DynamoDb(Box::new(e.into()))
+}
+
+impl From<aws_sdk_dynamodb::Error> for Error {
+    fn from(value: aws_sdk_dynamodb::Error) -> Self {
+        from_aws_sdk_dynamodb_error(value)
+    }
+}
+
+impl From<crate::serde_dynamo::Error> for Error {
+    fn from(value: crate::serde_dynamo::Error) -> Self {
+        Self::Serde(Box::new(value.into()))
+    }
 }
