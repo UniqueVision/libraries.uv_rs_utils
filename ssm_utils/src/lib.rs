@@ -85,7 +85,7 @@ impl<C: Cache> Client<C> {
                 {
                     Error::NotFound
                 } else {
-                    Error::Ssm(e.into())
+                    Error::Ssm(Box::new(e.into()))
                 }
             })?;
         match resp.parameter.and_then(|it| it.value) {
@@ -117,5 +117,5 @@ pub enum Error {
     #[error("Key not found")]
     NotFound,
     #[error(transparent)]
-    Ssm(sdk::Error),
+    Ssm(Box<sdk::Error>),
 }

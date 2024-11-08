@@ -778,7 +778,7 @@ dependencies = [
 
 [[package]]
 name = "dynamodb_utils"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "aws-config",
  "aws-sdk-dynamodb",
@@ -1520,7 +1520,7 @@ checksum = "f3cb5ba0dc43242ce17de99c180e96db90b235b8a9fdc9543c96d2209116bd9f"
 
 [[package]]
 name = "s3_utils"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "aws-config",
  "aws-sdk-s3",
@@ -1763,7 +1763,7 @@ dependencies = [
 
 [[package]]
 name = "ssm_utils"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "aws-config",
  "aws-sdk-ssm",
