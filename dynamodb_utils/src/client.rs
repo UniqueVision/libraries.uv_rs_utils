@@ -237,6 +237,28 @@ impl<A> Client<A> {
             .map_err(from_aws_sdk_dynamodb_error)
     }
 
+    /// テーブルのスループット値を更新します
+    pub async fn update_warm_throughput(
+        &self,
+        table_name: impl Into<String>,
+        read_units_per_second: i64,
+        write_units_per_second: i64,
+    ) -> Result<UpdateTableOutput, Error> {
+        use aws_sdk_dynamodb::types::WarmThroughput;
+        self.dynamodb
+            .update_table()
+            .table_name(table_name)
+            .warm_throughput(
+                WarmThroughput::builder()
+                    .read_units_per_second(read_units_per_second)
+                    .write_units_per_second(write_units_per_second)
+                    .build(),
+            )
+            .send()
+            .await
+            .map_err(from_aws_sdk_dynamodb_error)
+    }
+
     // テーブルを削除します
     pub async fn delete_table(
         &self,
