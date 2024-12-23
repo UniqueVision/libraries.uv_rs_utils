@@ -434,7 +434,7 @@ impl Client {
     /// client.copy_objects_by_prefix("source_bucket", "source_prefix", "dest_bucket", "dst_prefix").try_collect::<Vec<_>>().await;
     /// # })
     /// ```
-    pub async fn copy_objects_by_prefix<'a>(
+    pub fn copy_objects_by_prefix<'a>(
         &'a self,
         source_bucket: &'a str,
         source_prefix: &'a str,
