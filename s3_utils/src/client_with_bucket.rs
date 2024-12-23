@@ -164,7 +164,7 @@ impl ClientWithBucket {
     }
 
     /// prefix以下の全てのファイルを別のバケットにコピーします。
-    pub async fn copy_objects_to_by_prefix<'a>(
+    pub fn copy_objects_to_by_prefix<'a>(
         &'a self,
         prefix: &'a str,
         to_bucket: &'a str,
@@ -173,6 +173,5 @@ impl ClientWithBucket {
     {
         self.client
             .copy_objects_by_prefix(&self.bucket, prefix, to_bucket, to_prifix)
-            .await
     }
 }
