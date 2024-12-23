@@ -392,6 +392,37 @@ impl Client {
         }
         Ok(res)
     }
+
+    /// S3のファイルをコピーします.
+    /// ```no_run
+    /// # use s3_utils::*;
+    /// # tokio_test::block_on(async {
+    /// use futures_util::{StreamExt, TryStreamExt};
+    /// let client = s3_utils::Client::from_env().await;
+    /// client.copy_object("source_bucket", "source_key", "dest_bucket", "dest_key").await;
+    /// # })
+    /// ```
+    pub async fn copy_object<S>(
+        &self,
+        soucre_bucket: impl AsRef<[u8]>,
+        source_key: impl AsRef<[u8]>,
+        dst_bucket: impl Into<String>,
+        dst_key: impl Into<String>,
+    ) -> Result<aws_sdk_s3::operation::copy_object::CopyObjectOutput, Error> {
+        let source = format!(
+            "{}/{}",
+            urlencoding::Encoded(soucre_bucket),
+            urlencoding::Encoded(source_key.as_ref())
+        );
+        self.as_ref()
+            .copy_object()
+            .bucket(dst_bucket)
+            .key(dst_key)
+            .copy_source(source)
+            .send()
+            .await
+            .map_err(from_aws_sdk_s3_error)
+    }
 }
 
 fn merge<T>(mut first: &mut Option<Vec<T>>, mut second: &mut Option<Vec<T>>) {
