@@ -404,14 +404,14 @@ impl Client {
     /// ```
     pub async fn copy_object(
         &self,
-        soucre_bucket: impl AsRef<[u8]>,
+        source_bucket: impl AsRef<[u8]>,
         source_key: impl AsRef<[u8]>,
         dst_bucket: impl Into<String>,
         dst_key: impl Into<String>,
     ) -> Result<aws_sdk_s3::operation::copy_object::CopyObjectOutput, Error> {
         let source = format!(
             "{}/{}",
-            urlencoding::Encoded(soucre_bucket),
+            urlencoding::Encoded(source_bucket),
             urlencoding::Encoded(source_key.as_ref())
         );
         self.as_ref()
@@ -431,7 +431,7 @@ impl Client {
     /// # tokio_test::block_on(async {
     /// use futures_util::{StreamExt, TryStreamExt};
     /// let client = s3_utils::Client::from_env().await;
-    /// client.copy_objects_by_prefix("source_bucket", "source_prefix", "dest_bucket", "dst_prfix").await;
+    /// client.copy_objects_by_prefix("source_bucket", "source_prefix", "dest_bucket", "dst_prefix").try_collect::<Vec<_>>().await;
     /// # })
     /// ```
     pub async fn copy_objects_by_prefix<'a>(
@@ -439,7 +439,7 @@ impl Client {
         source_bucket: &'a str,
         source_prefix: &'a str,
         dst_bucket: &'a str,
-        dst_prfix: &'a str,
+        dst_prefix: &'a str,
     ) -> impl TryStream<Ok = aws_sdk_s3::operation::copy_object::CopyObjectOutput, Error = Error> + 'a
     {
         self.ls_raw(source_bucket, source_prefix, |obj| Ok(obj.key).transpose())
@@ -449,7 +449,7 @@ impl Client {
                         return futures_util::future::err(Error::UnexpectedNoPrefixKey)
                             .left_future()
                     }
-                    Some(key) => format!("{}/{}", dst_prfix, key),
+                    Some(key) => format!("{}/{}", dst_prefix, key),
                 };
                 self.copy_object(source_bucket, key, dst_bucket, dst_key)
                     .right_future()
