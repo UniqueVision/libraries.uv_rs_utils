@@ -11,7 +11,7 @@ use aws_sdk_s3::{
     types::{Delete, ObjectIdentifier},
 };
 use aws_smithy_types_convert::stream::PaginationStreamExt;
-use futures_util::{TryStream, TryStreamExt};
+use futures_util::{FutureExt, TryStream, TryStreamExt};
 use serde::de::DeserializeOwned;
 use std::{mem::swap, time::Duration};
 use tokio::io::{AsyncReadExt, BufReader};
@@ -391,6 +391,69 @@ impl Client {
             };
         }
         Ok(res)
+    }
+
+    /// S3のファイルをコピーします.
+    /// ```no_run
+    /// # use s3_utils::*;
+    /// # tokio_test::block_on(async {
+    /// use futures_util::{StreamExt, TryStreamExt};
+    /// let client = s3_utils::Client::from_env().await;
+    /// client.copy_object("source_bucket", "source_key", "dest_bucket", "dest_key").await;
+    /// # })
+    /// ```
+    pub async fn copy_object(
+        &self,
+        source_bucket: impl AsRef<[u8]>,
+        source_key: impl AsRef<[u8]>,
+        dst_bucket: impl Into<String>,
+        dst_key: impl Into<String>,
+    ) -> Result<aws_sdk_s3::operation::copy_object::CopyObjectOutput, Error> {
+        let source = format!(
+            "{}/{}",
+            urlencoding::Encoded(source_bucket),
+            urlencoding::Encoded(source_key.as_ref())
+        );
+        self.as_ref()
+            .copy_object()
+            .bucket(dst_bucket)
+            .key(dst_key)
+            .copy_source(source)
+            .send()
+            .await
+            .map_err(from_aws_sdk_s3_error)
+    }
+
+    /// S3のオブジェクトを、prefix以下のものをまとめてcopyします.
+    ///
+    /// ```no_run
+    /// # use s3_utils::*;
+    /// # tokio_test::block_on(async {
+    /// use futures_util::{StreamExt, TryStreamExt};
+    /// let client = s3_utils::Client::from_env().await;
+    /// client.copy_objects_by_prefix("source_bucket", "source_prefix", "dest_bucket", "dst_prefix").try_collect::<Vec<_>>().await;
+    /// # })
+    /// ```
+    pub async fn copy_objects_by_prefix<'a>(
+        &'a self,
+        source_bucket: &'a str,
+        source_prefix: &'a str,
+        dst_bucket: &'a str,
+        dst_prefix: &'a str,
+    ) -> impl TryStream<Ok = aws_sdk_s3::operation::copy_object::CopyObjectOutput, Error = Error> + 'a
+    {
+        self.ls_raw(source_bucket, source_prefix, |obj| Ok(obj.key).transpose())
+            .and_then(move |key| {
+                let dst_key = match key.strip_prefix(source_prefix) {
+                    None => {
+                        return futures_util::future::err(Error::UnexpectedNoPrefixKey)
+                            .left_future()
+                    }
+                    Some(key) => format!("{}/{}", dst_prefix, key),
+                };
+                self.copy_object(source_bucket, key, dst_bucket, dst_key)
+                    .right_future()
+            })
     }
 }
 

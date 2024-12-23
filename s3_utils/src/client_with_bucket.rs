@@ -22,6 +22,10 @@ impl ClientWithBucket {
     pub fn no_bucket_client(&self) -> &Client {
         &self.client
     }
+
+    pub fn get_bucket_name(&self) -> &str {
+        &self.bucket
+    }
 }
 
 impl Client {
@@ -157,5 +161,18 @@ impl ClientWithBucket {
         prefix: impl Into<String>,
     ) -> Result<Option<DeleteObjectsOutput>, Error> {
         self.client.delete_by_prefix(&self.bucket, prefix).await
+    }
+
+    /// prefix以下の全てのファイルを別のバケットにコピーします。
+    pub async fn copy_objects_to_by_prefix<'a>(
+        &'a self,
+        prefix: &'a str,
+        to_bucket: &'a str,
+        to_prifix: &'a str,
+    ) -> impl TryStream<Ok = aws_sdk_s3::operation::copy_object::CopyObjectOutput, Error = Error> + 'a
+    {
+        self.client
+            .copy_objects_by_prefix(&self.bucket, prefix, to_bucket, to_prifix)
+            .await
     }
 }
