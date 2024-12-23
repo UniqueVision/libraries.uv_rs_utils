@@ -3,7 +3,7 @@ members = ["dynamodb_utils", "s3_utils", "ssm_utils"]
 resolver = "2"
 
 [workspace.package]
-version = "0.4.0"
+version = "0.5.0"
 
 [workspace.dependencies]
 aws-config = { version = "1.5.10", features = ["behavior-version-latest"] }
