@@ -8,10 +8,11 @@ impl Client {
     /// SSMの値をキャッシュできるようにします
     /// ```no_run
     /// # use ssm_utils::*;
-    ///
+    /// # tokio_test::block_on(async {
     /// let client = Client::from_env().await.with_cache();
     /// client.get("aaa").await;
     /// client.get("aaa").await; // キャッシュされている
+    /// # });
     /// ```
     pub fn with_cache(self) -> Client<EternalCache> {
         Client {
@@ -24,12 +25,14 @@ impl Client {
     /// 時間経過で値が落ちるようになります。
     /// ```no_run
     /// # use ssm_utils::*;
-    ///
+    /// # use std::time::Duration;
+    /// # tokio_test::block_on(async {
     /// let client = Client::from_env().await.with_cache_expire(Duration::from_secs(60));
     /// client.get("aaa").await;
     /// client.get("aaa").await; // キャッシュされている
     /// // ... 最初の取得から一分後
     /// client.get("aaa").await; // キャッシュしなおす
+    /// # });
     /// ```
     #[cfg(feature = "expire")]
     pub fn with_cache_expire(self, time_to_live: std::time::Duration) -> Client<ExpireCache> {

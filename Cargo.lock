@@ -1916,6 +1916,7 @@ dependencies = [
  "aws-sdk-ssm",
  "mini-moka",
  "thiserror",
+ "tokio-test",
 ]
 
 [[package]]
