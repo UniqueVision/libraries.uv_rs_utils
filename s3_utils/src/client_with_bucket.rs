@@ -8,7 +8,7 @@ use aws_sdk_s3::{
     primitives::ByteStream,
 };
 use futures_util::TryStream;
-use std::time::Duration;
+use std::{path::Path, time::Duration};
 
 /// バケットを固定した状態で使う`Client`.
 #[derive(Debug, Clone)]
@@ -99,6 +99,25 @@ impl ClientWithBucket {
     ) -> Result<PutObjectOutput, Error> {
         self.client
             .put_object(&self.bucket, content_type, content_disposition, key, body)
+            .await
+    }
+
+    /// ローカルファイルをストリームとして読み込み、S3にアップロードします。
+    pub async fn put_object_from_file(
+        &self,
+        content_type: impl Into<String>,
+        content_disposition: impl Into<String>,
+        key: impl Into<String>,
+        file_path: impl AsRef<Path>,
+    ) -> Result<PutObjectOutput, Error> {
+        self.client
+            .put_object_from_file(
+                &self.bucket,
+                content_type,
+                content_disposition,
+                key,
+                file_path,
+            )
             .await
     }
 

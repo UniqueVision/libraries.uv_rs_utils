@@ -13,7 +13,7 @@ use aws_sdk_s3::{
 use aws_smithy_types_convert::stream::PaginationStreamExt;
 use futures_util::{FutureExt, TryStream, TryStreamExt};
 use serde::de::DeserializeOwned;
-use std::{mem::swap, time::Duration};
+use std::{mem::swap, path::Path, time::Duration};
 use tokio::io::{AsyncReadExt, BufReader};
 
 /// awsのS3の高レベルなClient.
@@ -261,6 +261,21 @@ impl Client {
             .map_err(from_aws_sdk_s3_error)?;
 
         Ok(res)
+    }
+
+    /// ローカルファイルをストリームとして読み込み、S3にアップロードします。
+    pub async fn put_object_from_file(
+        &self,
+        bucket: impl Into<String>,
+        content_type: impl Into<String>,
+        content_disposition: impl Into<String>,
+        key: impl Into<String>,
+        file_path: impl AsRef<Path>,
+    ) -> Result<PutObjectOutput, Error> {
+        let byte_stream = ByteStream::from_path(file_path).await?;
+
+        self.put_object(bucket, content_type, content_disposition, key, byte_stream)
+            .await
     }
 
     /// S3のファイルへのGETのpresigend requestのURLなどを取得します.

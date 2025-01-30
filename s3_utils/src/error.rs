@@ -9,6 +9,8 @@ pub enum Error {
     Io(#[from] std::io::Error),
     #[error("No prefix in key")]
     UnexpectedNoPrefixKey,
+    #[error(transparent)]
+    ByteStream(#[from] aws_sdk_s3::primitives::ByteStreamError),
 }
 
 pub(crate) fn from_aws_sdk_s3_error(e: impl Into<aws_sdk_s3::Error>) -> Error {
