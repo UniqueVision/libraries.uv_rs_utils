@@ -12,9 +12,15 @@ use crate::{
     utils::deserialize_stream,
     IntoValue,
 };
+use aws_sdk_dynamodb::{operation::create_table::CreateTableOutput, types::{AttributeDefinition, BillingMode, KeySchemaElement, KeyType, ScalarAttributeType}};
 use futures_util::{TryStream, TryStreamExt};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt::Display};
+
+pub enum TableType {
+    OnDemand,
+    Provisioned(i64, i64),
+}
 
 /// awsのDynamoDbの高レベルなClient.
 /// 低レベルな操作は[`raw_client`](`Client::raw_client`)を使って取得したものを使ってください
@@ -249,6 +255,69 @@ impl<A> Client<A> {
             .await
             .map_err(from_aws_sdk_dynamodb_error)
     }
+
+    pub async fn create_table(
+        &self,
+        table_name: impl Into<String>,
+        key: impl Into<String>,
+        sort_key: Option<impl Into<String>>,
+        table_type: TableType,
+    ) -> Result<CreateTableOutput, Error> {
+        let key = key.into();
+        let ad = AttributeDefinition::builder()
+            .attribute_name(&key)
+            .attribute_type(ScalarAttributeType::S)
+            .build()?;
+
+        let ks = KeySchemaElement::builder()
+            .attribute_name(key)
+            .key_type(KeyType::Hash)
+            .build()?;
+
+        let (ads, kss) = if let Some(sort_key) = sort_key {
+            let sort_key = sort_key.into();
+            let pair1= {
+                let sort_key = AttributeDefinition::builder()
+                    .attribute_name(&sort_key)
+                    .attribute_type(ScalarAttributeType::S)
+                    .build()?;
+                vec![ad, sort_key]
+            };
+            let pair2 = {
+                let sort_key = KeySchemaElement::builder()
+                .attribute_name(&sort_key)
+                .key_type(KeyType::Range)
+                .build()?;
+                vec![ks, sort_key]
+            };
+            (pair1, pair2)
+        } else {
+            (vec![ad], vec![ks])
+        };
+
+        let table_builder = self
+            .dynamodb
+            .create_table()
+            .table_name(table_name)
+            .set_key_schema(Some(kss))
+            .set_attribute_definitions(Some(ads));
+
+        match table_type {
+            TableType::OnDemand => {
+                table_builder
+                    .billing_mode(BillingMode::PayPerRequest)
+                    .send()
+                    .await
+            }
+            TableType::Provisioned(read_capacity, write_capacity) => {
+                let pt = ProvisionedThroughput::builder()
+                    .read_capacity_units(read_capacity)
+                    .write_capacity_units(write_capacity)
+                    .build()?;
+                table_builder.provisioned_throughput(pt).send().await
+            }
+        }.map_err(|e| e.into())
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -257,8 +326,12 @@ pub enum Error {
     DynamoDb(Box<aws_sdk_dynamodb::Error>),
     #[error(transparent)]
     Serde(Box<crate::serde_dynamo::Error>),
+    #[error("BuildError {0}")]
+    BuildError(#[from] aws_sdk_dynamodb::error::BuildError),
     #[error("No Item")]
     NotFound,
+    #[error("CreateTableError {0}")]
+    CreateTableError(#[from] aws_sdk_dynamodb::error::SdkError<aws_sdk_dynamodb::operation::create_table::CreateTableError>),
 }
 
 pub(crate) fn from_aws_sdk_dynamodb_error(e: impl Into<aws_sdk_dynamodb::Error>) -> Error {
