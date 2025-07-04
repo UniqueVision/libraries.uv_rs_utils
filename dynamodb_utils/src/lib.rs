@@ -1,4 +1,4 @@
-pub use client::{Client, Error};
+pub use client::{Client, Error, TableType};
 pub use into_values::IntoValue;
 
 mod client;
